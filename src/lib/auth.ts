@@ -1,0 +1,38 @@
+import { db } from "@/app/db";
+import { sendEmail } from "@/utils/sendEmail";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+
+export const auth = betterAuth({
+	baseURL: process.env.BETTER_AUTH_URL, 
+	database: drizzleAdapter(db, {
+		provider: "pg",
+	}),
+	emailAndPassword: {
+		enabled: true,
+		maxPasswordLength: 18,
+		minPasswordLength: 8,
+		requireEmailVerification: true,
+		resetPasswordTokenExpiresIn: 60 * 5,
+	},
+	emailVerification: {
+		sendOnSignUp: true,
+		expiresIn: 60 * 5,
+		sendVerificationEmail: async ({ user, url, token }, request) => {
+			void sendEmail({
+				to: user.email,
+				subject: "Verify your email address",
+				text: `Click the link to verify your email address: ${url}`,
+			});
+		},
+	},
+
+	socialProviders: {
+		google: {
+			prompt: "select_account consent",
+			accessType: "offline", 
+			clientId: process.env.GOOGLE_CLIENT_ID as string,
+			clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+		},
+	},
+});
