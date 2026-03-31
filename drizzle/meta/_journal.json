@@ -15,6 +15,13 @@
       "when": 1774941884300,
       "tag": "0001_dapper_mongoose",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774955036851,
+      "tag": "0002_sparkling_harpoon",
+      "breakpoints": true
     }
   ]
 }

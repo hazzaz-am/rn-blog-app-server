@@ -1,12 +1,15 @@
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { relations } from "drizzle-orm";
 import { index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import z from "zod";
 import { user } from "./auth.schema";
 
 export const post = pgTable(
 	"post",
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
-		userId: text("user_id")
+		userId: uuid("user_id")
 			.references(() => user.id, { onDelete: "cascade" })
 			.notNull(),
 		caption: text("caption"),
@@ -30,9 +33,7 @@ export const postContents = pgTable(
 			.notNull(),
 
 		type: text("type", { enum: ["image", "video"] }).notNull(),
-
 		url: text("url").notNull(),
-
 		order: integer("order").notNull(),
 	},
 	(table) => [index("post_contents_post_id_idx").on(table.postId)],
@@ -48,3 +49,18 @@ export const postContentRelations = relations(postContents, ({ one }) => ({
 		references: [post.id],
 	}),
 }));
+
+export type Post = InferSelectModel<typeof post>;
+export type NewPost = InferInsertModel<typeof post>;
+export type PostContent = InferSelectModel<typeof postContents>;
+export type NewPostContent = InferInsertModel<typeof postContents>;
+export const createPostSchema = createInsertSchema(post, {
+	userId: z.uuid(),
+	caption: z.string().optional(),
+	location: z.string(),
+});
+export const updatePostSchema = createInsertSchema(post).partial();
+export const postSchema = createSelectSchema(post);
+export const postContentSchema = createInsertSchema(postContents);
+export const updatePostContentSchema = createInsertSchema(postContents).partial();
+export const postContentResponseSchema = createSelectSchema(postContents);
