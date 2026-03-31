@@ -1,5 +1,5 @@
-import { db } from "@/app/db";
-import { sendEmail } from "@/utils/sendEmail";
+import { db } from "@/db";
+import { sendEmail } from "@/utils/sendEmail.util";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 

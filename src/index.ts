@@ -1,12 +1,11 @@
-import { Hono } from 'hono'
-import { auth } from './lib/auth';
+import { serve } from "bun";
+import app from "./app";
 
-const app = new Hono()
+const port = Number(process.env.PORT) || 3000;
 
-app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+const server = serve({
+	fetch: app.fetch,
+	port,
+});
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
-
-export default app
+console.log(`Listening on http://localhost:${server.port}`);
