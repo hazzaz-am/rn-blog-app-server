@@ -1,13 +1,16 @@
 import { db } from "@/db";
 import { sendEmail } from "@/utils/sendEmail.util";
+import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { bearer } from "better-auth/plugins";
 
 export const auth = betterAuth({
-	baseURL: process.env.BETTER_AUTH_URL, 
+	baseURL: process.env.BETTER_AUTH_URL,
 	database: drizzleAdapter(db, {
 		provider: "pg",
 	}),
+	plugins: [bearer(), expo()],
 	emailAndPassword: {
 		enabled: true,
 		maxPasswordLength: 18,
@@ -26,11 +29,10 @@ export const auth = betterAuth({
 			});
 		},
 	},
-
 	socialProviders: {
 		google: {
 			prompt: "select_account consent",
-			accessType: "offline", 
+			accessType: "offline",
 			clientId: process.env.GOOGLE_CLIENT_ID as string,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
 		},
