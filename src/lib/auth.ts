@@ -1,4 +1,5 @@
 import { db } from "@/db";
+import env from "@/utils/env.util";
 import { sendEmail } from "@/utils/sendEmail.util";
 import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
@@ -10,6 +11,11 @@ export const auth = betterAuth({
 	database: drizzleAdapter(db, {
 		provider: "pg",
 	}),
+	trustedOrigins: [
+		"rnblogapp://",
+
+		...(env?.NODE_ENV === "development" ? ["exp://", "exp://**", "exp://192.168.*.*:*/**"] : []),
+	],
 	plugins: [bearer(), expo()],
 	emailAndPassword: {
 		enabled: true,
