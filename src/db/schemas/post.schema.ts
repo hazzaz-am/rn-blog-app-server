@@ -23,6 +23,19 @@ export const post = pgTable(
 	(table) => [index("post_user_id_idx").on(table.userId)],
 );
 
+export const postComments = pgTable("post_comments", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	postId: uuid("post_id")
+		.references(() => post.id, { onDelete: "cascade" })
+		.notNull(),
+	userId: uuid("user_id")
+		.references(() => user.id, { onDelete: "cascade" })
+		.notNull(),
+	comment: text("comment").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const postContents = pgTable(
 	"post_contents",
 	{
@@ -41,6 +54,7 @@ export const postContents = pgTable(
 
 export const postRelations = relations(post, ({ many }) => ({
 	contents: many(postContents),
+	comments: many(postComments),
 }));
 
 export const postContentRelations = relations(postContents, ({ one }) => ({
@@ -51,9 +65,13 @@ export const postContentRelations = relations(postContents, ({ one }) => ({
 }));
 
 export type Post = InferSelectModel<typeof post>;
+export type PostResponse = z.infer<typeof postSchema>;
 export type NewPost = InferInsertModel<typeof post>;
 export type PostContent = InferSelectModel<typeof postContents>;
 export type NewPostContent = InferInsertModel<typeof postContents>;
+export type PostComment = InferSelectModel<typeof postComments>;
+export type NewPostComment = InferInsertModel<typeof postComments>;
+
 export const createPostSchema = createInsertSchema(post, {
 	userId: z.uuid(),
 	caption: z.string().optional(),
@@ -64,3 +82,8 @@ export const postSchema = createSelectSchema(post);
 export const postContentSchema = createInsertSchema(postContents);
 export const updatePostContentSchema = createInsertSchema(postContents).partial();
 export const postContentResponseSchema = createSelectSchema(postContents);
+export const postCommentSchema = createInsertSchema(postComments);
+export const postCommentResponseSchema = createSelectSchema(postComments);
+export const updatePostCommentSchema = z.object({
+	comment: z.string().min(1),
+});

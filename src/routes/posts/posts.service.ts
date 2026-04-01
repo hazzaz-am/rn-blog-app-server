@@ -1,18 +1,21 @@
 import { db } from "@/db";
-import type { Post, PostContent } from "@/db/schemas/post.schema";
-import { post, postContents } from "@/db/schemas/post.schema";
+import { post, postComments, postContents } from "@/db/schemas/post.schema";
 import { AppRouteHandler } from "@/types";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import {
+	AddCommentRoute,
 	AddContentRoute,
 	CreatePostRoute,
+	DeleteCommentRoute,
+	DeleteContentRoute,
+	DeletePostRoute,
 	DislikePostRoute,
-	GetOnePostRoute,
+	GetPostByIdRoute,
 	LikePostRoute,
 	ListPostRoute,
-	PostDeleteRoute,
+	UpdateCommentRoute,
 	UpdatePostRoute,
-	userPostsRoute,
+	UserPostsRoute,
 } from "./posts.router";
 
 const serializePost = (post: any) => ({
@@ -24,7 +27,7 @@ const serializePost = (post: any) => ({
 	})),
 });
 
-export const createPostHandler: AppRouteHandler<CreatePostRoute> = async (c) => {
+export const createPost: AppRouteHandler<CreatePostRoute> = async (c) => {
 	const body = c.req.valid("json");
 
 	const inserted = await db
@@ -47,7 +50,20 @@ export const createPostHandler: AppRouteHandler<CreatePostRoute> = async (c) => 
 	);
 };
 
-export const getPostById: AppRouteHandler<GetOnePostRoute> = async (c) => {
+export const listPosts: AppRouteHandler<ListPostRoute> = async (c) => {
+	const { limit, offset } = c.req.valid("query");
+
+	const results = await db.query.post.findMany({
+		orderBy: [desc(post.createdAt)],
+		limit: Number(limit),
+		offset: Number(offset),
+		with: { contents: true },
+	});
+
+	return c.json(results.map(serializePost), 200);
+};
+
+export const getPostById: AppRouteHandler<GetPostByIdRoute> = async (c) => {
 	const { id } = c.req.valid("param");
 
 	const result = await db.query.post.findFirst({
@@ -62,20 +78,7 @@ export const getPostById: AppRouteHandler<GetOnePostRoute> = async (c) => {
 	return c.json(serializePost(result), 200);
 };
 
-export const getPosts: AppRouteHandler<ListPostRoute> = async (c) => {
-	const { limit, offset } = c.req.valid("query");
-
-	const results = await db.query.post.findMany({
-		orderBy: [desc(post.createdAt)],
-		limit: Number(limit),
-		offset: Number(offset),
-		with: { contents: true },
-	});
-
-	return c.json(results.map(serializePost), 200);
-};
-
-export const getPostsByUserId: AppRouteHandler<userPostsRoute> = async (c) => {
+export const getPostsByUserId: AppRouteHandler<UserPostsRoute> = async (c) => {
 	const { userId } = c.req.valid("param");
 	const { limit, offset } = c.req.valid("query");
 
@@ -103,10 +106,42 @@ export const updatePost: AppRouteHandler<UpdatePostRoute> = async (c) => {
 	return c.json(serializePost(result), 200);
 };
 
-export const deletePost: AppRouteHandler<PostDeleteRoute> = async (c) => {
+export const deletePost: AppRouteHandler<DeletePostRoute> = async (c) => {
 	const { id } = c.req.valid("param");
 
 	const [result] = await db.delete(post).where(eq(post.id, id)).returning();
+
+	if (!result) {
+		return c.json({ message: "Post not found" }, 404);
+	}
+
+	return c.json(serializePost(result), 200);
+};
+
+export const likePost: AppRouteHandler<LikePostRoute> = async (c) => {
+	const { id } = c.req.valid("param");
+
+	const [result] = await db
+		.update(post)
+		.set({ likesCount: sql`${post.likesCount} + 1` })
+		.where(eq(post.id, id))
+		.returning();
+
+	if (!result) {
+		return c.json({ message: "Post not found" }, 404);
+	}
+
+	return c.json(serializePost(result), 200);
+};
+
+export const dislikePost: AppRouteHandler<DislikePostRoute> = async (c) => {
+	const { id } = c.req.valid("param");
+
+	const [result] = await db
+		.update(post)
+		.set({ likesCount: sql`${post.likesCount} - 1` })
+		.where(eq(post.id, id))
+		.returning();
 
 	if (!result) {
 		return c.json({ message: "Post not found" }, 404);
@@ -131,57 +166,74 @@ export const addPostContent: AppRouteHandler<AddContentRoute> = async (c) => {
 	return c.json(result, 201);
 };
 
-export const deletePostContent = async (id: string): Promise<PostContent | undefined> => {
-	const [result] = await db.delete(postContents).where(eq(postContents.id, id)).returning();
-	return result;
-};
-
-export const incrementLikes: AppRouteHandler<LikePostRoute> = async (c) => {
-	const { id } = c.req.valid("param");
+export const deletePostContent: AppRouteHandler<DeleteContentRoute> = async (c) => {
+	const { contentId, postId } = c.req.valid("param");
 
 	const [result] = await db
-		.update(post)
-		.set({ likesCount: sql`${post.likesCount} + 1` })
-		.where(eq(post.id, id))
+		.delete(postContents)
+		.where(and(eq(postContents.id, contentId), eq(postContents.postId, postId)))
 		.returning();
 
 	if (!result) {
-		return c.json({ message: "Post not found" }, 404);
+		return c.json({ message: "Content not found" }, 404);
 	}
 
-	return c.json(serializePost(result), 200);
+	return c.json({ message: "Content Deleted Successfully" }, 200);
 };
 
-export const decrementLikes: AppRouteHandler<DislikePostRoute> = async (c) => {
-	const { id } = c.req.valid("param");
+/**
+ *
+ * ! Comments Services
+ *
+ */
+
+export const addComment: AppRouteHandler<AddCommentRoute> = async (c) => {
+	const { postId } = c.req.valid("param");
+	const data = c.req.valid("json");
 
 	const [result] = await db
-		.update(post)
-		.set({ likesCount: sql`${post.likesCount} - 1` })
-		.where(eq(post.id, id))
+		.insert(postComments)
+		.values({ ...data, postId: postId })
+		.returning();
+
+	if (!result.id) {
+		return c.json({ message: "Failed to add comment" }, 400);
+	}
+
+	return c.json(result, 201);
+};
+
+export const deleteComment: AppRouteHandler<DeleteCommentRoute> = async (c) => {
+	const { commentId, postId } = c.req.valid("param");
+
+	const [result] = await db
+		.delete(postComments)
+		.where(and(eq(postComments.id, commentId), eq(postComments.postId, postId)))
 		.returning();
 
 	if (!result) {
-		return c.json({ message: "Post not found" }, 404);
+		return c.json({ message: "Comment not found" }, 404);
 	}
 
-	return c.json(serializePost(result), 200);
+	return c.json({ message: "Comment Deleted Successfully" }, 200);
 };
 
-export const incrementComments = async (id: string): Promise<Post | undefined> => {
-	const [result] = await db
-		.update(post)
-		.set({ commentsCount: sql`${post.commentsCount} + 1` })
-		.where(eq(post.id, id))
-		.returning();
-	return result;
-};
+export const updateComment: AppRouteHandler<UpdateCommentRoute> = async (c) => {
+	const { postId, commentId } = c.req.valid("param");
+	const data = c.req.valid("json");
 
-export const incrementShares = async (id: string): Promise<Post | undefined> => {
-	const [result] = await db
-		.update(post)
-		.set({ sharesCount: sql`${post.sharesCount} + 1` })
-		.where(eq(post.id, id))
+	const [updated] = await db
+		.update(postComments)
+		.set({
+			...data,
+			updatedAt: new Date(),
+		})
+		.where(and(eq(postComments.id, commentId), eq(postComments.postId, postId)))
 		.returning();
-	return result;
+
+	if (!updated) {
+		return c.json({ message: "Comment not found" }, 404);
+	}
+
+	return c.json(updated, 200);
 };

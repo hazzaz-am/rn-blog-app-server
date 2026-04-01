@@ -1,20 +1,17 @@
-import { createPostSchema, postSchema, postContentSchema, postContentResponseSchema, updatePostSchema } from "@/db/schemas/post.schema";
+import {
+	createPostSchema,
+	postCommentResponseSchema,
+	postCommentSchema,
+	postContentResponseSchema,
+	postContentSchema,
+	postSchema,
+	updatePostCommentSchema,
+	updatePostSchema,
+} from "@/db/schemas/post.schema";
 import { createRoute, z } from "@hono/zod-openapi";
 import * as HttpStatusCodes from "stoker/http-status-codes";
 import { jsonContent, jsonContentRequired } from "stoker/openapi/helpers";
 import { createMessageObjectSchema } from "stoker/openapi/schemas";
-
-const postIdParams = z.object({
-	id: z.string().uuid().openapi({
-		example: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-	}),
-});
-
-const userIdParams = z.object({
-	userId: z.string().uuid().openapi({
-		example: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-	}),
-});
 
 const paginationQuery = z
 	.object({
@@ -48,12 +45,14 @@ export const listPosts = createRoute({
 	},
 });
 
-export const getOnePost = createRoute({
+export const getPostById = createRoute({
 	tags: ["Posts"],
 	method: "get",
 	path: "/posts/:id",
 	request: {
-		params: postIdParams,
+		params: z.object({
+			id: z.uuid(),
+		}),
 	},
 	responses: {
 		[HttpStatusCodes.OK]: jsonContentRequired(postSchema, "Post details"),
@@ -61,12 +60,14 @@ export const getOnePost = createRoute({
 	},
 });
 
-export const userPosts = createRoute({
+export const getPostsByUserId = createRoute({
 	tags: ["Posts"],
 	method: "get",
 	path: "/posts/user/:userId",
 	request: {
-		params: userIdParams,
+		params: z.object({
+			userId: z.uuid(),
+		}),
 		query: paginationQuery,
 	},
 	responses: {
@@ -79,7 +80,9 @@ export const updatePost = createRoute({
 	method: "put",
 	path: "/posts/:id",
 	request: {
-		params: postIdParams,
+		params: z.object({
+			id: z.uuid(),
+		}),
 		body: jsonContent(updatePostSchema, "Updated post data"),
 	},
 	responses: {
@@ -88,12 +91,14 @@ export const updatePost = createRoute({
 	},
 });
 
-export const postDelete = createRoute({
+export const deletePost = createRoute({
 	tags: ["Posts"],
 	method: "delete",
 	path: "/posts/:id",
 	request: {
-		params: postIdParams,
+		params: z.object({
+			id: z.uuid(),
+		}),
 	},
 	responses: {
 		[HttpStatusCodes.OK]: jsonContentRequired(postSchema, "Post deleted successfully"),
@@ -106,7 +111,9 @@ export const likePost = createRoute({
 	method: "post",
 	path: "/posts/:id/like",
 	request: {
-		params: postIdParams,
+		params: z.object({
+			id: z.uuid(),
+		}),
 	},
 	responses: {
 		[HttpStatusCodes.OK]: jsonContentRequired(postSchema, "Post liked"),
@@ -119,7 +126,9 @@ export const dislikePost = createRoute({
 	method: "delete",
 	path: "/posts/:id/like",
 	request: {
-		params: postIdParams,
+		params: z.object({
+			id: z.uuid(),
+		}),
 	},
 	responses: {
 		[HttpStatusCodes.OK]: jsonContentRequired(postSchema, "Post unliked"),
@@ -127,12 +136,14 @@ export const dislikePost = createRoute({
 	},
 });
 
-export const addContent = createRoute({
+export const addPostContent = createRoute({
 	tags: ["Posts"],
 	method: "post",
 	path: "/posts/:id/contents",
 	request: {
-		params: postIdParams,
+		params: z.object({
+			id: z.uuid(),
+		}),
 		body: jsonContent(postContentSchema, "Post content data"),
 	},
 	responses: {
@@ -141,12 +152,87 @@ export const addContent = createRoute({
 	},
 });
 
+export const deletePostContent = createRoute({
+	tags: ["Posts"],
+	method: "delete",
+	path: "/posts/:postId/contents/:contentId",
+	request: {
+		params: z.object({
+			postId: z.uuid(),
+			contentId: z.uuid(),
+		}),
+	},
+	responses: {
+		[HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string() }), "Content Deleted Successfully"),
+		[HttpStatusCodes.NOT_FOUND]: jsonContent(z.object({ message: z.string() }), "Content not found"),
+	},
+});
+
+/**
+ *
+ * ! Comments Routes
+ *
+ */
+
+export const addComment = createRoute({
+	tags: ["Comments"],
+	method: "post",
+	path: "/posts/:id/comments",
+	request: {
+		params: z.object({
+			postId: z.uuid(),
+		}),
+		body: jsonContent(postCommentSchema, "Post content data"),
+	},
+	responses: {
+		[HttpStatusCodes.CREATED]: jsonContentRequired(postCommentResponseSchema, "Content added"),
+		[HttpStatusCodes.BAD_REQUEST]: jsonContent(createMessageObjectSchema("Invalid request"), "Invalid request"),
+	},
+});
+
+export const deleteComment = createRoute({
+	tags: ["Comments"],
+	method: "delete",
+	path: "/posts/:postId/comments/:commentId",
+	request: {
+		params: z.object({
+			postId: z.uuid(),
+			commentId: z.uuid(),
+		}),
+	},
+	responses: {
+		[HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string() }), "Comment Deleted Successfully"),
+		[HttpStatusCodes.NOT_FOUND]: jsonContent(z.object({ message: z.string() }), "Comment not found"),
+	},
+});
+
+export const updateComment = createRoute({
+	tags: ["Comments"],
+	method: "put",
+	path: "/posts/:postId/comments/:commentId",
+	request: {
+		params: z.object({
+			postId: z.uuid(),
+			commentId: z.uuid(),
+		}),
+		body: jsonContent(updatePostCommentSchema, "Update Post Comment"),
+	},
+	responses: {
+		[HttpStatusCodes.OK]: jsonContent(postCommentResponseSchema, "Comment Updated Successfully"),
+		[HttpStatusCodes.NOT_FOUND]: jsonContent(createMessageObjectSchema("Comment not found"), "Comment not found"),
+	},
+});
+
 export type CreatePostRoute = typeof createPost;
 export type ListPostRoute = typeof listPosts;
-export type GetOnePostRoute = typeof getOnePost;
-export type userPostsRoute = typeof userPosts;
+export type GetPostByIdRoute = typeof getPostById;
+export type UserPostsRoute = typeof getPostsByUserId;
 export type UpdatePostRoute = typeof updatePost;
-export type PostDeleteRoute = typeof postDelete;
+export type DeletePostRoute = typeof deletePost;
 export type LikePostRoute = typeof likePost;
 export type DislikePostRoute = typeof dislikePost;
-export type AddContentRoute = typeof addContent;
+export type AddContentRoute = typeof addPostContent;
+export type DeleteContentRoute = typeof deletePostContent;
+export type AddCommentRoute = typeof addComment;
+export type DeleteCommentRoute = typeof deleteComment;
+export type UpdateCommentRoute = typeof updateComment;
