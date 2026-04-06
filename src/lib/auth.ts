@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import env from "@/utils/env.util";
-import { sendEmail } from "@/utils/sendEmail.util";
+import { sendEmail } from "@/utils/emails/sendEmail.util";
 import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -27,11 +27,12 @@ export const auth = betterAuth({
 	emailVerification: {
 		sendOnSignUp: true,
 		expiresIn: 60 * 5,
-		sendVerificationEmail: async ({ user, url, token }, request) => {
+		sendVerificationEmail: async ({ user, url }) => {
 			void sendEmail({
 				to: user.email,
 				subject: "Verify your email address",
 				text: `Click the link to verify your email address: ${url}`,
+				verificationUrl: url,
 			});
 		},
 	},

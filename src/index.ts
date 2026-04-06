@@ -8,4 +8,4 @@ const server = serve({
 	port,
 });
 
-console.log(`Listening on http://localhost:${server.port}`);
+console.log(`Listening on http://192.168.10.249:${server.port}`);

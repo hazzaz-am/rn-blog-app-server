@@ -51,7 +51,7 @@ export const getPostById = createRoute({
 	path: "/posts/:id",
 	request: {
 		params: z.object({
-			id: z.uuid(),
+			id: z.string(),
 		}),
 	},
 	responses: {
@@ -66,7 +66,7 @@ export const getPostsByUserId = createRoute({
 	path: "/posts/user/:userId",
 	request: {
 		params: z.object({
-			userId: z.uuid(),
+			userId: z.string(),
 		}),
 		query: paginationQuery,
 	},
@@ -81,7 +81,7 @@ export const updatePost = createRoute({
 	path: "/posts/:id",
 	request: {
 		params: z.object({
-			id: z.uuid(),
+			id: z.string(),
 		}),
 		body: jsonContent(updatePostSchema, "Updated post data"),
 	},
@@ -97,7 +97,7 @@ export const deletePost = createRoute({
 	path: "/posts/:id",
 	request: {
 		params: z.object({
-			id: z.uuid(),
+			id: z.string(),
 		}),
 	},
 	responses: {
@@ -112,7 +112,7 @@ export const likePost = createRoute({
 	path: "/posts/:id/like",
 	request: {
 		params: z.object({
-			id: z.uuid(),
+			id: z.string(),
 		}),
 	},
 	responses: {
@@ -127,7 +127,7 @@ export const dislikePost = createRoute({
 	path: "/posts/:id/like",
 	request: {
 		params: z.object({
-			id: z.uuid(),
+			id: z.string(),
 		}),
 	},
 	responses: {
@@ -142,7 +142,7 @@ export const addPostContent = createRoute({
 	path: "/posts/:id/contents",
 	request: {
 		params: z.object({
-			id: z.uuid(),
+			id: z.string(),
 		}),
 		body: jsonContent(postContentSchema, "Post content data"),
 	},
@@ -158,8 +158,8 @@ export const deletePostContent = createRoute({
 	path: "/posts/:postId/contents/:contentId",
 	request: {
 		params: z.object({
-			postId: z.uuid(),
-			contentId: z.uuid(),
+			postId: z.string(),
+			contentId: z.string(),
 		}),
 	},
 	responses: {
@@ -180,7 +180,7 @@ export const addComment = createRoute({
 	path: "/posts/:id/comments",
 	request: {
 		params: z.object({
-			postId: z.uuid(),
+			postId: z.string(),
 		}),
 		body: jsonContent(postCommentSchema, "Post content data"),
 	},
@@ -196,8 +196,8 @@ export const deleteComment = createRoute({
 	path: "/posts/:postId/comments/:commentId",
 	request: {
 		params: z.object({
-			postId: z.uuid(),
-			commentId: z.uuid(),
+			postId: z.string(),
+			commentId: z.string(),
 		}),
 	},
 	responses: {
@@ -212,8 +212,8 @@ export const updateComment = createRoute({
 	path: "/posts/:postId/comments/:commentId",
 	request: {
 		params: z.object({
-			postId: z.uuid(),
-			commentId: z.uuid(),
+			postId: z.string(),
+			commentId: z.string(),
 		}),
 		body: jsonContent(updatePostCommentSchema, "Update Post Comment"),
 	},

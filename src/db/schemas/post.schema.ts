@@ -1,6 +1,6 @@
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { relations } from "drizzle-orm";
-import { index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import z from "zod";
 import { user } from "./auth.schema";
@@ -8,8 +8,8 @@ import { user } from "./auth.schema";
 export const post = pgTable(
 	"post",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
-		userId: uuid("user_id")
+		id: text("id").primaryKey(),
+		userId: text("user_id")
 			.references(() => user.id, { onDelete: "cascade" })
 			.notNull(),
 		caption: text("caption"),
@@ -24,11 +24,11 @@ export const post = pgTable(
 );
 
 export const postComments = pgTable("post_comments", {
-	id: uuid("id").primaryKey().defaultRandom(),
-	postId: uuid("post_id")
+	id: text("id").primaryKey(),
+	postId: text("post_id")
 		.references(() => post.id, { onDelete: "cascade" })
 		.notNull(),
-	userId: uuid("user_id")
+	userId: text("user_id")
 		.references(() => user.id, { onDelete: "cascade" })
 		.notNull(),
 	comment: text("comment").notNull(),
@@ -39,9 +39,9 @@ export const postComments = pgTable("post_comments", {
 export const postContents = pgTable(
 	"post_contents",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: text("id").primaryKey(),
 
-		postId: uuid("post_id")
+		postId: text("post_id")
 			.references(() => post.id, { onDelete: "cascade" })
 			.notNull(),
 
@@ -73,7 +73,7 @@ export type PostComment = InferSelectModel<typeof postComments>;
 export type NewPostComment = InferInsertModel<typeof postComments>;
 
 export const createPostSchema = createInsertSchema(post, {
-	userId: z.uuid(),
+	userId: z.string(),
 	caption: z.string().optional(),
 	location: z.string(),
 });
